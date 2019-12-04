@@ -18,11 +18,35 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////////
 
+//#define SCREEN_TYPE_SSD1306
+#define SCREEN_TYPE_1602
+//#define SCREEN_TYPE_2004
+
 #include <EEPROM.h>
 #include <SPI.h>
 #include <Wire.h>
+
+#ifdef SCREEN_TYPE_SSD1306
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#define MAX_SYMB 22
+Adafruit_SSD1306 display(128, 32, &Wire, -1);
+#endif
+
+#if defined (SCREEN_TYPE_1602) || defined (SCREEN_TYPE_2004)
+#include <LiquidCrystal_I2C.h>
+#endif
+
+#ifdef SCREEN_TYPE_2004
+#define MAX_SYMB 20
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+#endif
+
+#ifdef SCREEN_TYPE_1602
+#define MAX_SYMB 16
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+#endif
+
 
 #define ST_Pin 9                    // Пин для подключения наушников
 #define LP_in 7                     // Пин правого контакт ключа
@@ -33,10 +57,6 @@
 #define enc_btn_Pin 2               // Пин кнопки SW энкодера
 #define enc_a_Pin 3                 // Пин контакта DT энкодера
 #define enc_b_Pin 4                 // Пин контакта CLK энкодера
-
-#define SCREEN_WIDTH 128            // Размер экрана ширина
-#define SCREEN_HEIGHT 32            // Размер экрана высота
-#define OLED_RESET     -1           // Если есть Rset pin на экране
 
 int longPressTime = 500;            // Переменная длительность длительного нажатия на кнопку энкодера
 int blink_time = 500;               // Переменная скорости моргания элементов меню
@@ -101,28 +121,11 @@ byte blink_flag = 0;                  // Флаг
 byte blink_state = 0;                 // Статус
 
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
 void setup() {
   Serial.begin(115200);
   Wire.setClock(10000000);
 
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
-
-  display.clearDisplay();
-  display.setTextColor(SSD1306_WHITE);
-
-  display.setTextSize(3);
-  display.setCursor(14, 0);
-  display.print("UB3APP");
-  display.setTextSize(1);
-  display.setCursor(35, 24);
-  display.print("CW Trainer");
-  display.display();
-  delay(3000);
+  init_lcd();
   
 
   pinMode (enc_a_Pin, INPUT);         // sets encoder pins
@@ -153,10 +156,51 @@ void setup() {
 
   keyerState = IDLE;
 
+  #ifdef SCREEN_TYPE_SSD1306
   display.setTextSize(1);
   display.clearDisplay();
   display.display();
+  #endif
+  
   print_lcd_menu(true);
+}
+
+void init_lcd() {
+  #ifdef SCREEN_TYPE_SSD1306
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+  }
+
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(3);
+  display.setCursor(14, 0);
+  display.print("UB3APP");
+  display.setTextSize(1);
+  display.setCursor(35, 24);
+  display.print("CW Trainer");
+  display.display();
+  #endif
+
+  #ifdef SCREEN_TYPE_1602
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(5, 0);
+  lcd.print("UB3APP");
+  lcd.setCursor(3, 1);
+  lcd.print("CW Trainer");
+  #endif
+
+  #ifdef SCREEN_TYPE_2004
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(7, 1);
+  lcd.print("UB3APP");
+  lcd.setCursor(5, 2);
+  lcd.print("CW Trainer");
+  #endif
+  
+  delay(3000);
 }
 
 void loop() {
@@ -384,28 +428,41 @@ String code2char(String c) {
 
 void print_lcd() {
   if ( (text1 == text1_prev) && (text2 == text2_prev) ) return;
-
-  int MAX_SYMB = 22;
+  
   if ( text1.length() > MAX_SYMB) text1 = text1.substring(text1.length() - MAX_SYMB, text1.length());
   if ( text2.length() > MAX_SYMB) text2 = text2.substring(text2.length() - MAX_SYMB, text2.length());
   
   text1_prev = text1;
   text2_prev = text2;
 
-
+  #ifdef SCREEN_TYPE_SSD1306
   display.clearDisplay();
-
   print_lcd_menu(false);
-
   display.setCursor(0, 8);
   display.print(text1);
-
   display.setCursor(0, 24);
   display.print(text2);
-  
   display.display();
+  #endif
+
+  #ifdef SCREEN_TYPE_1602
+  print_lcd_menu(false);
+  lcd.setCursor(0, 0);
+  lcd.print(text1);
+  lcd.setCursor(0, 1);
+  lcd.print(text2);
+  #endif
+
+  #ifdef SCREEN_TYPE_2004
+  print_lcd_menu(false);
+  lcd.setCursor(0, 1);
+  lcd.print(text1);
+  lcd.setCursor(0, 2);
+  lcd.print(text2);
+  #endif
 }
 
+#ifdef SCREEN_TYPE_SSD1306
 void lcd_cll(int line = 1) {
   for (int y=0*line; y<=6*line; y++) {
     for (int x=0; x<127; x++) {
@@ -413,43 +470,58 @@ void lcd_cll(int line = 1) {
       }
   }
 }
+#endif
 
 void print_lcd_menu(boolean cls) {
-  display.setCursor(0, 0);
+
+  char* text_menu_t;
+  char text_menu[MAX_SYMB];
+
+  #ifdef SCREEN_TYPE_SSD1306
+  text_menu_t = "WPM: %2s     TONE: %4s";
+  #endif
+
+  #ifdef SCREEN_TYPE_1602
+  text_menu_t = "WPM:%2s TONE:%2s";
+  #endif
+
+  #ifdef SCREEN_TYPE_2004
+  text_menu_t = "WPM: %2s     TONE: %4s";
+  #endif
+
+  if (( menu == 0 ) || ( blink_state == 1 )) {
+    sprintf(text_menu, text_menu_t, String(key_speed), String(ST_Freq));
+  }
   
-  if ( menu == 0 ) {
-    //display.print(cls_str);
-    display.setCursor(0, 0);
-    display.print("WPM: "+String(key_speed)+"    TONE: "+String(ST_Freq));
+  if (( menu == 1 ) || ( blink_state == 0 )) {
+    sprintf(text_menu, text_menu_t, " ", String(ST_Freq));
   }
 
-  if ( menu == 1 ) {
-    if (blink_state == 0) {
-      blink_state = 1;
-      lcd_cll();
-      display.setCursor(0, 0);
-      display.print("WPM:       TONE: "+String(ST_Freq));
-    } else {
-      blink_state = 0;
-      lcd_cll();
-      display.setCursor(0, 0);
-      display.print("WPM: "+String(key_speed)+"    TONE: "+String(ST_Freq));
-    }
+  if (( menu == 2 ) || ( blink_state == 0 )) {
+    sprintf(text_menu, text_menu_t, String(key_speed), " ");
   }
 
-  if ( menu == 2 ) {
-    if (blink_state == 0) {
-      blink_state = 1;
-      lcd_cll();
-      display.setCursor(0, 0);
-      display.print("WPM: "+String(key_speed)+"    TONE: ");
-    } else {
-      blink_state = 0;
-      lcd_cll();
-      display.setCursor(0, 0);
-      display.print("WPM: "+String(key_speed)+"    TONE: "+String(ST_Freq));
-    }
+  if ( menu != 0 ) {
+    if (blink_state == 0) blink_state = 1; else blink_state = 0;
   }
+  
+  #ifdef SCREEN_TYPE_SSD1306
+  if ( menu != 0 ) lcd_cll();
+  display.setCursor(0, 0);
+  display.print(text_menu);
   
   if (cls) display.display();
+  #endif
+
+  #ifdef SCREEN_TYPE_1604
+  if ( menu != 0 ) {
+    lcd.setCursor(0, 0);
+    lcd.print(text_menu);
+  }
+  #endif
+
+  #ifdef SCREEN_TYPE_2004
+  lcd.setCursor(0, 0);
+  lcd.print(text_menu);
+  #endif
 }
