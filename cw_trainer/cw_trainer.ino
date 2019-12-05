@@ -57,10 +57,6 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 #define enc_a_Pin 3                 // Пин контакта DT энкодера
 #define enc_b_Pin 4                 // Пин контакта CLK энкодера
 
-#define SCREEN_WIDTH 128            // Размер экрана ширина
-#define SCREEN_HEIGHT 32            // Размер экрана высота
-#define OLED_RESET     -1           // Если есть Rset pin на экране
-
 int longPressTime = 500;            // Переменная длительность длительного нажатия на кнопку энкодера
 int blink_time = 500;               // Переменная скорости моргания элементов меню
 
