@@ -18,13 +18,13 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////////
 
-//#define SCREEN_TYPE_SSD1306
-#define SCREEN_TYPE_1602
-//#define SCREEN_TYPE_2004
-
 #include <EEPROM.h>
 #include <SPI.h>
 #include <Wire.h>
+
+#define SCREEN_TYPE_SSD1306
+//#define SCREEN_TYPE_1602
+//#define SCREEN_TYPE_2004
 
 #ifdef SCREEN_TYPE_SSD1306
 #include <Adafruit_GFX.h>
@@ -47,7 +47,6 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 #endif
 
-
 #define ST_Pin 9                    // Пин для подключения наушников
 #define LP_in 7                     // Пин правого контакт ключа
 #define RP_in 5                     // Пин левого контакт ключа
@@ -57,6 +56,10 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 #define enc_btn_Pin 2               // Пин кнопки SW энкодера
 #define enc_a_Pin 3                 // Пин контакта DT энкодера
 #define enc_b_Pin 4                 // Пин контакта CLK энкодера
+
+#define SCREEN_WIDTH 128            // Размер экрана ширина
+#define SCREEN_HEIGHT 32            // Размер экрана высота
+#define OLED_RESET     -1           // Если есть Rset pin на экране
 
 int longPressTime = 500;            // Переменная длительность длительного нажатия на кнопку энкодера
 int blink_time = 500;               // Переменная скорости моргания элементов меню
@@ -155,7 +158,7 @@ void setup() {
   key_speed = so.ispeed;
 
   keyerState = IDLE;
-  
+
   print_lcd_menu(true);
 }
 
@@ -432,7 +435,7 @@ String code2char(String c) {
 
 void print_lcd() {
   if ( (text1 == text1_prev) && (text2 == text2_prev) ) return;
-  
+
   if ( text1.length() > MAX_SYMB) text1 = text1.substring(text1.length() - MAX_SYMB, text1.length());
   if ( text2.length() > MAX_SYMB) text2 = text2.substring(text2.length() - MAX_SYMB, text2.length());
   
@@ -478,38 +481,47 @@ void lcd_cll(int line = 1) {
 }
 #endif
 
-void print_lcd_menu(boolean cls) {
 
-  char* text_menu_t;
-  char text_menu[MAX_SYMB];
+String get_text_menu(int p_wpm, int p_tfreq) {
+  String text_menu = "";
+
+  String wpm = (p_wpm == -1) ? " " : String(p_wpm);
+  String tfreq = (p_tfreq == -1) ? " " : String(p_tfreq);
+
+  if (wpm.length() < 2) wpm = " " + wpm;
 
   #ifdef SCREEN_TYPE_SSD1306
-  text_menu_t = "WPM: %2s     TONE: %4s";
+  text_menu = "WPM: "+wpm+"    TONE: "+tfreq;
   #endif
 
   #ifdef SCREEN_TYPE_1602
-  text_menu_t = "WPM:%2s TONE:%2s";
+  text_menu = "WPM:"+wpm+" TONE:"+tfreq;
   #endif
 
   #ifdef SCREEN_TYPE_2004
-  text_menu_t = "WPM: %2s   TONE: %4s";
+  text_menu = "WPM: "+wpm+"   TONE: "+tfreq;
   #endif
 
+  return text_menu;
+}
+
+void print_lcd_menu(boolean cls) {
+  String text_menu;
+
   if (( menu == 0 ) || ( blink_state == 1 )) {
-    sprintf(text_menu, text_menu_t, String(key_speed), String(ST_Freq));
+    text_menu = get_text_menu(key_speed, ST_Freq);
   }
   
   if (( menu == 1 ) && ( blink_state == 0 )) {
-    sprintf(text_menu, text_menu_t, " ", String(ST_Freq));
+    text_menu = get_text_menu(-1, ST_Freq);
   }
 
   if (( menu == 2 ) && ( blink_state == 0 )) {
-    sprintf(text_menu, text_menu_t, String(key_speed), " ");
+    text_menu = get_text_menu(key_speed, -1);
   }
 
-
   if (blink_state == 0) blink_state = 1; else blink_state = 0;
-  
+
   #ifdef SCREEN_TYPE_SSD1306
   if ( menu != 0 ) lcd_cll();
   display.setCursor(0, 0);
