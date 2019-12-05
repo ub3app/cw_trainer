@@ -155,12 +155,6 @@ void setup() {
   key_speed = so.ispeed;
 
   keyerState = IDLE;
-
-  #ifdef SCREEN_TYPE_SSD1306
-  display.setTextSize(1);
-  display.clearDisplay();
-  display.display();
-  #endif
   
   print_lcd_menu(true);
 }
@@ -201,6 +195,16 @@ void init_lcd() {
   #endif
   
   delay(3000);
+
+  #ifdef SCREEN_TYPE_SSD1306
+  display.setTextSize(1);
+  display.clearDisplay();
+  display.display();
+  #endif
+
+  #if defined (SCREEN_TYPE_1602) || defined (SCREEN_TYPE_2004)
+  lcd.clear();
+  #endif
 }
 
 void loop() {
@@ -446,6 +450,7 @@ void print_lcd() {
   #endif
 
   #ifdef SCREEN_TYPE_1602
+  lcd.clear();
   print_lcd_menu(false);
   lcd.setCursor(0, 0);
   lcd.print(text1);
@@ -454,6 +459,7 @@ void print_lcd() {
   #endif
 
   #ifdef SCREEN_TYPE_2004
+  lcd.clear();
   print_lcd_menu(false);
   lcd.setCursor(0, 1);
   lcd.print(text1);
@@ -486,24 +492,23 @@ void print_lcd_menu(boolean cls) {
   #endif
 
   #ifdef SCREEN_TYPE_2004
-  text_menu_t = "WPM: %2s     TONE: %4s";
+  text_menu_t = "WPM: %2s   TONE: %4s";
   #endif
 
   if (( menu == 0 ) || ( blink_state == 1 )) {
     sprintf(text_menu, text_menu_t, String(key_speed), String(ST_Freq));
   }
   
-  if (( menu == 1 ) || ( blink_state == 0 )) {
+  if (( menu == 1 ) && ( blink_state == 0 )) {
     sprintf(text_menu, text_menu_t, " ", String(ST_Freq));
   }
 
-  if (( menu == 2 ) || ( blink_state == 0 )) {
+  if (( menu == 2 ) && ( blink_state == 0 )) {
     sprintf(text_menu, text_menu_t, String(key_speed), " ");
   }
 
-  if ( menu != 0 ) {
-    if (blink_state == 0) blink_state = 1; else blink_state = 0;
-  }
+
+  if (blink_state == 0) blink_state = 1; else blink_state = 0;
   
   #ifdef SCREEN_TYPE_SSD1306
   if ( menu != 0 ) lcd_cll();
