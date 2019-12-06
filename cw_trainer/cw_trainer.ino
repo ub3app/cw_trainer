@@ -450,9 +450,12 @@ void print_lcd() {
 
   #ifdef SCREEN_TYPE_1602
   lcd.clear();
-  print_lcd_menu(false);
-  lcd.setCursor(0, 0);
-  lcd.print(text1);
+  if (menu == 0) {
+    lcd.setCursor(0, 0);
+    lcd.print(text1);
+  } else {
+    print_lcd_menu(false);
+  }
   lcd.setCursor(0, 1);
   lcd.print(text2);
   #endif
@@ -526,11 +529,9 @@ void print_lcd_menu(boolean cls) {
   if (cls) display.display();
   #endif
 
-  #ifdef SCREEN_TYPE_1604
-  if ( menu != 0 ) {
-    lcd.setCursor(0, 0);
-    lcd.print(text_menu);
-  }
+  #ifdef SCREEN_TYPE_1602
+  lcd.setCursor(0, 0);
+  lcd.print(text_menu);
   #endif
 
   #ifdef SCREEN_TYPE_2004
