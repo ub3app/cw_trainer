@@ -83,7 +83,12 @@ char keyerControl;                  // Состояние ключа
 static long ktimer;                 // Таймер удержания контактов ключа
 
 static long ktimer_idle_dit;        // Таймер интервала между символами
+static long ktimer_idle_dit_min;
+static long ktimer_idle_dit_max;
 static long ktimer_idle_dah;        // Таймер интервала между словами
+static long ktimer_idle_dah_min;
+static long ktimer_idle_dah_max;
+int ktimer_idle_deviation = 5;
 int idle_first_flag = 4;            // Текущие состояние бездействия
 
 String ch = "";                     // Текущий знак в формате кода Морзе
@@ -235,10 +240,22 @@ void loop() {
         if (idle_first_flag == 1) {
           ktimer_idle_dit += millis();
           ktimer_idle_dah += millis();
+
+          ktimer_idle_dit_min = ktimer_idle_dit - ktimer_idle_dit * ktimer_idle_deviation / 100;
+          ktimer_idle_dit_max = ktimer_idle_dit + ktimer_idle_dit * ktimer_idle_deviation / 100;
+          
+          ktimer_idle_dah_min = ktimer_idle_dah - ktimer_idle_dah * ktimer_idle_deviation / 100;
+          ktimer_idle_dah_max = ktimer_idle_dah + ktimer_idle_dah * ktimer_idle_deviation / 100;
+
+          if ( ktimer_idle_dit_max > ktimer_idle_dah_min ) {
+            ktimer_idle_dit_max = ktimer_idle_dit;
+            ktimer_idle_dah_min = ktimer_idle_dah;
+          }
+          
           idle_first_flag = 2;
         }
 
-        if ( (millis() > ktimer_idle_dit) && idle_first_flag == 2 ) {
+        if ( (millis() > ktimer_idle_dit_min && millis() < ktimer_idle_dit_max) && (idle_first_flag == 2) ) {
           Serial.print(code2char(ch));
           text1 += " ";
           text2 += code2char(ch);
@@ -247,7 +264,7 @@ void loop() {
           idle_first_flag = 3;
         }
 
-        if ( (millis() > ktimer_idle_dah) && idle_first_flag == 3 ) {
+        if ( (millis() > ktimer_idle_dah_min && millis() < ktimer_idle_dah_max) && idle_first_flag == 3 ) {
           Serial.print(" ");
           text1 += "  ";
           text2 += " ";
